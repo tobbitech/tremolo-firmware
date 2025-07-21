@@ -152,10 +152,6 @@ void loop() {
   
     // select shape of the signal
     int shape = analogRead(shapepin);
-    // if (shape < 5) {
-    //   // Pure triangle wave
-    //   next_lfo_value = triangleWave_8bit[counter];
-    // }
     if (shape < 512) {
       // linear combination of triangle and sine
       float sine = static_cast<float>(sinWave_8bit[counter]);
@@ -165,10 +161,6 @@ void loop() {
 
       next_lfo_value = static_cast<uint8_t>(round( sine_ratio * sine + (1-sine_ratio) * triangle  ));
     }
-    // else if (shape < 512) {
-    //   // Pure sine
-    //   next_lfo_value = sinWave_8bit[counter];
-    // }
     else {
       // linear combination of square and sine
       float sine = static_cast<float>(sinWave_8bit[counter]);
@@ -178,13 +170,9 @@ void loop() {
 
       next_lfo_value = static_cast<uint8_t>(round( square_ratio * square + (1-square_ratio) * sine  ));
     }
-    // else {
-    //   // Pure square
-    //   next_lfo_value = squareWave_8bit[counter];
-    // }
+
 
     analogWrite(lfopin, next_lfo_value);
-    // analogWrite(lfopin, sinWave_8bit[counter]);
   }
 
 
