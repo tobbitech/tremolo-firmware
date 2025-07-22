@@ -66,7 +66,7 @@ void quick_blink() {
 }
 
 void set_next_counter() {
-  uint8_t sample_step = 4;
+  uint8_t sample_step = 2;
 
   if (counter >= wave_size - sample_step) { risingEdge = false;}
   else if (counter <= 0) { risingEdge = true;}
