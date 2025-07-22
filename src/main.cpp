@@ -3,7 +3,7 @@
 // ATtiny85 @ 16MHz internal
 
 #define lfopin 0 // pin 0 on attiny PB0
-#define ritpin 1 // modified PCB, ADC1
+#define rate2pin 1 // modified PCB, ADC1
 #define tappin 1 // PB1
 #define shapepin 3 // ADC3
 #define ratepin 2 // pin 4 is analog pin 2... ADC2
@@ -21,6 +21,8 @@ const uint8_t triangleWave_8bit[] = {0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 
 const uint8_t squareWave_8bit[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255};
 
 size_t counter = 0;
+size_t counter2 = 0;
+
 
 // Global variables
 unsigned long maxRate = 300000;
@@ -48,12 +50,24 @@ int currentPWMValue = 0; // will count to 255 and back again;
 bool risingEdge = true; //selects which direction counter is counting
 
 auto lastTick = millis();
+auto lastTick_lfo2 = millis();
+
+bool enable_lfo2 = false;
 
 
 
 int getRateFromPot() {
   float a = analogRead(ratepin);
   float scaledAndInverted = map(a, 0, 1024, maxRateFromPot, minRateFromPot);
+  return scaledAndInverted;
+}
+
+int getRate2FromPot() {
+  float a = analogRead(rate2pin);
+  if ( a < 5) { enable_lfo2 = false;}
+  else { enable_lfo2 = true;}
+  float scaledAndInverted = map(a, 0, 1024, maxRateFromPot, minRateFromPot);
+  // analogWrite(lfopin, scaledAndInverted/3.0);
   return scaledAndInverted;
 }
 
@@ -74,12 +88,21 @@ void set_next_counter() {
   else if (risingEdge == false ) { counter -= sample_step;}
 }
 
+void set_next_counter2() {
+  uint8_t sample_step = 2;
+
+  if (counter2 >= wave_size - sample_step) { risingEdge = false;}
+  else if (counter2 <= 0) { risingEdge = true;}
+  if (risingEdge == true) { counter2 += sample_step; }
+  else if (risingEdge == false ) { counter2 -= sample_step;}
+}
+
 void setup() {
   pinMode(lfopin, OUTPUT);
   pinMode(ratepin, INPUT);
   pinMode(tappin, INPUT);
   pinMode(shapepin, INPUT);
-  pinMode(ritpin, INPUT);
+  pinMode(rate2pin, INPUT);
 
   // @16MHz
   // TCCR0B = TCCR0B & 0b11111000 | 0b001 -> 65.5kHz
@@ -135,6 +158,16 @@ void loop() {
 //   if (digitalRead(tappin) == HIGH) {
 //     tapReleased = true;
 //   }
+  uint32_t lfo2rate = getRate2FromPot();
+
+  if (millis() > (lastTick + lfo2rate)) {
+    if (enable_lfo2 == true) {
+      if (millis() > (lastTick_lfo2 + lfo2rate)) {
+        lastTick_lfo2 = millis();
+        set_next_counter2();
+      }
+    }
+  }
   
   if(getRateFromPot() != lastRateFromPot) {
     if((tapRateSet == false && doubleTime == false) || getRateFromPot() < (lastRateFromPot - rate_hysteresis) || getRateFromPot() > (lastRateFromPot + rate_hysteresis)) {
@@ -173,6 +206,10 @@ void loop() {
       next_lfo_value = static_cast<uint8_t>(round( square_ratio * square + (1-square_ratio) * sine  ));
     }
 
+    if (enable_lfo2 == true) {
+      // cut amblitude in half to avoid the combined LFO to saturate the 8-bit PWM
+      next_lfo_value = (next_lfo_value/2) + (sinWave_8bit[counter2]/2);
+    }
 
     analogWrite(lfopin, next_lfo_value);
   }
