@@ -28,8 +28,8 @@ unsigned long minRate = 1000;
 uint8_t lfoResolution = wave_size / 2; //how many descrete values the LFO waveform has for each half period
 int rate_hysteresis = 5; // how much analog value from ratePot can change before tap is overruled
 
-float maxRateFromPot = 200;
-float minRateFromPot = 1;
+float maxRateFromPot = 600; // actually sets minimum rate
+float minRateFromPot = 1;   // actually sets maximum rate
 
 auto tapTempoTimer = millis();
 float tapRate = 50;
@@ -66,10 +66,12 @@ void quick_blink() {
 }
 
 void set_next_counter() {
-  if (counter >= wave_size -1) { risingEdge = false;}
+  uint8_t sample_step = 4;
+
+  if (counter >= wave_size - sample_step) { risingEdge = false;}
   else if (counter <= 0) { risingEdge = true;}
-  if (risingEdge == true) { counter++; }
-  else if (risingEdge == false ) { counter--;}
+  if (risingEdge == true) { counter += sample_step; }
+  else if (risingEdge == false ) { counter -= sample_step;}
 }
 
 void setup() {
